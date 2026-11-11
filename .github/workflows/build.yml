@@ -1,0 +1,88 @@
+# Builds installable apps without a Mac or a paid Apple account.
+#   iOS:     an UNSIGNED .ipa. SideStore signs it with your free Apple ID when you install it.
+#   Android: an APK signed with the debug key, which you can install directly.
+# Run it from the repo's Actions tab ("Run workflow"), then download the files under "Artifacts".
+name: Build apps
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which app to build
+        type: choice
+        options: [android, ios, both]
+        default: android
+
+jobs:
+  ios:
+    if: inputs.platform == 'ios' || inputs.platform == 'both'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Generate the native iOS project
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Archive without code signing
+        run: |
+          WORKSPACE=$(ls -d ios/*.xcworkspace | head -n 1)
+          SCHEME=$(basename "$WORKSPACE" .xcworkspace)
+          xcodebuild archive \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package the .ipa
+        run: |
+          APP=$(ls -d build/App.xcarchive/Products/Applications/*.app | head -n 1)
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/
+          cd build && zip -qry VerseScroll-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VerseScroll-ios
+          path: build/VerseScroll-unsigned.ipa
+
+  android:
+    if: inputs.platform == 'android' || inputs.platform == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Generate the native Android project
+        run: npx expo prebuild --platform android --clean
+
+      - name: Build the APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VerseScroll-android
+          path: android/app/build/outputs/apk/release/*.apk
