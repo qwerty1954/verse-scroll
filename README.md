@@ -3,7 +3,7 @@
 A personal ESV Bible app: a full-screen vertical feed, one verse per card. The spec lives in the
 "Verse Scroll — App Spec" doc.
 
-**Done:** milestones 1 to 5 (spike, In Order feed, picker and progress, Random, settings and backup).
+**Done:** milestones 1 to 6 (spike, In Order feed, picker and progress, Random, settings and backup, standalone builds).
 
 ## Run it on your Android phone
 
@@ -38,7 +38,12 @@ The Raw API screen is under **Settings → Developer: raw API response**.
 
 ## Install builds
 
-`.github/workflows/build.yml` builds an unsigned iOS `.ipa` (for SideStore) and an Android APK on GitHub's machines. Put this folder in a GitHub repository, open **Actions → Build apps → Run workflow**, and download the files under **Artifacts**. It hasn't been run yet, so expect to fix a step the first time.
+`.github/workflows/build.yml` builds the standalone apps on GitHub's machines. On GitHub, open **Actions → Build apps → Run workflow**, pick **android**, **ios** or **both**, and download the result under **Artifacts** when it finishes (Android about 15 minutes, iOS about 10).
+
+- **Android:** the artifact is a zip. On the phone, **extract** it in your Files app first, then tap the `.apk` (tapping it inside the zip gives a "problem parsing" error). Allow installs from Files when asked; Play Protect may warn about an unknown app, so tap **Install anyway**.
+- **iOS:** the artifact holds `VerseScroll-unsigned.ipa`. Open it in SideStore, which signs it with your free Apple ID and refreshes it every 7 days.
+
+The installed app is separate from Expo Go. Use **Settings → Export backup** in one and **Import backup** in the other to carry your progress across.
 
 ## Code layout
 
